@@ -1,4 +1,9 @@
-import { HumanApprovalNode, MetaCapabilityNode, StoreDraftNode, ValidateContentNode } from './nodes';
+import {
+  HumanApprovalNode,
+  MetaCapabilityNode,
+  StoreDraftNode,
+  ValidateContentNode,
+} from './nodes';
 import { WorkflowEngine } from './engine';
 
 export const workflowCatalog = [
@@ -12,7 +17,8 @@ export const workflowCatalog = [
   {
     id: 'manual-engagement',
     name: 'Manual engagement approval',
-    description: 'Require a human decision before opening an unrelated Instagram post.',
+    description:
+      'Require a human decision before opening an unrelated Instagram post.',
     requiresProfessional: false,
     nodes: ['Human approval'],
   },
@@ -26,7 +32,8 @@ export const workflowCatalog = [
   {
     id: 'comment-inbox',
     name: 'Comment and inbox routing',
-    description: 'Process owned-post comments and eligible inbound conversations.',
+    description:
+      'Process owned-post comments and eligible inbound conversations.',
     requiresProfessional: true,
     nodes: ['Meta capability'],
   },
@@ -41,7 +48,9 @@ export function getWorkflowEngine(workflowId: string) {
   }
 
   if (workflowId === 'manual-engagement') {
-    return new WorkflowEngine([new HumanApprovalNode('human-approval', 'Human approval')]);
+    return new WorkflowEngine([
+      new HumanApprovalNode('human-approval', 'Human approval'),
+    ]);
   }
 
   if (workflowId === 'official-publish') {
@@ -53,7 +62,9 @@ export function getWorkflowEngine(workflowId: string) {
   }
 
   if (workflowId === 'comment-inbox') {
-    return new WorkflowEngine([new MetaCapabilityNode('meta-capability', 'Meta capability')]);
+    return new WorkflowEngine([
+      new MetaCapabilityNode('meta-capability', 'Meta capability'),
+    ]);
   }
 
   return null;
