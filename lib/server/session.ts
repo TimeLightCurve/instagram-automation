@@ -42,5 +42,14 @@ export function createOAuthState() {
   return randomBytes(24).toString('base64url');
 }
 
-export const secureCookie =
-  process.env.APP_URL?.startsWith('https://') ?? false;
+export function isSecureCookie(requestOrigin?: string | null) {
+  const origin =
+    requestOrigin?.trim() ||
+    process.env.APP_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    '';
+  return origin.startsWith('https://');
+}
+
+/** @deprecated Prefer isSecureCookie(requestOrigin) so local HTTP works. */
+export const secureCookie = isSecureCookie();

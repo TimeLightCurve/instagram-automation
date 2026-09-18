@@ -1,9 +1,15 @@
+import { type NextRequest } from 'next/server';
+
 import { getCurrentInstagramAccountId } from '@/lib/server/current-account';
-import { instagramConfiguration } from '@/lib/server/instagram';
+import {
+  instagramConfiguration,
+  instagramRedirectUri,
+} from '@/lib/server/instagram';
 import { getDatabase, isMongoConfigured } from '@/lib/server/mongodb';
 
-export async function GET() {
-  const config = instagramConfiguration();
+export async function GET(request: NextRequest) {
+  const origin = request.nextUrl.origin;
+  const config = instagramConfiguration(origin);
   let database: 'connected' | 'not-configured' | 'unavailable' =
     'not-configured';
   if (isMongoConfigured()) {
@@ -19,6 +25,7 @@ export async function GET() {
     status: database === 'unavailable' ? 'degraded' : 'ok',
     accountMode: accountId ? 'professional' : 'personal',
     instagramApi: config.configured ? 'configured' : 'not-configured',
+    redirectUri: config.appUrl ? instagramRedirectUri(origin) : null,
     database,
     timestamp: new Date().toISOString(),
   });

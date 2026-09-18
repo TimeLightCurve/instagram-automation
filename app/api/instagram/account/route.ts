@@ -1,15 +1,24 @@
+import { type NextRequest } from 'next/server';
+
 import { getCurrentInstagramAccountId } from '@/lib/server/current-account';
-import { instagramConfiguration } from '@/lib/server/instagram';
+import {
+  instagramConfiguration,
+  instagramRedirectUri,
+} from '@/lib/server/instagram';
 import {
   connectionToView,
   getInstagramConnection,
   markInstagramConnection,
 } from '@/lib/server/records';
 
-export async function GET() {
-  const config = instagramConfiguration();
+export async function GET(request: NextRequest) {
+  const origin = request.nextUrl.origin;
+  const config = instagramConfiguration(origin);
+  const redirectUri = config.appUrl ? instagramRedirectUri(origin) : undefined;
   if (!config.configured) {
-    return Response.json(connectionToView(null, config.missing));
+    return Response.json(
+      connectionToView(null, config.missing, redirectUri),
+    );
   }
 
   const accountId = await getCurrentInstagramAccountId();
@@ -22,5 +31,7 @@ export async function GET() {
     await markInstagramConnection(connection.instagramUserId, 'expired');
     connection = await getInstagramConnection(connection.instagramUserId);
   }
-  return Response.json(connectionToView(connection, config.missing));
+  return Response.json(
+    connectionToView(connection, config.missing, redirectUri),
+  );
 }
