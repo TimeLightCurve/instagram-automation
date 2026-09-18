@@ -8,8 +8,8 @@ import {
 import { recordJobSafe, saveInstagramConnection } from '@/lib/server/records';
 import {
   connectionCookieName,
+  isSecureCookie,
   oauthStateCookieName,
-  secureCookie,
   signSessionValue,
   verifySessionValue,
 } from '@/lib/server/session';
@@ -22,7 +22,8 @@ function panelRedirect(request: NextRequest, result: string) {
 
 export async function GET(request: NextRequest) {
   const startedAt = new Date();
-  const config = instagramConfiguration();
+  const origin = request.nextUrl.origin;
+  const config = instagramConfiguration(origin);
   const code = request.nextUrl.searchParams.get('code');
   const state = request.nextUrl.searchParams.get('state');
   const errorMessage = request.nextUrl.searchParams.get('error_description');
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const token = await exchangeInstagramCode(code);
+    const token = await exchangeInstagramCode(code, origin);
     const profile = await getInstagramProfile(token.accessToken);
     await saveInstagramConnection({
       instagramUserId: profile.id,
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
     response.cookies.set(connectionCookieName, signSessionValue(profile.id), {
       httpOnly: true,
       sameSite: 'lax',
-      secure: secureCookie,
+      secure: isSecureCookie(origin),
       path: '/',
       maxAge: 365 * 24 * 60 * 60,
     });

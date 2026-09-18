@@ -43,8 +43,11 @@ keeps only a signed, HTTP-only connection cookie.
    `/api/instagram/callback` URL under **Instagram → API setup with Instagram
    login**. The scheme, host, path, and trailing slash must match exactly.
 3. Copy `.env.example` to `.env.local` and fill in MongoDB, Instagram App, and
-   secret values.
-4. Start the app and use **Settings → Instagram Business connection**.
+   secret values. For local work set `APP_URL=http://localhost:3000`. On Vercel,
+   set the same keys in Project → Settings → Environment Variables with
+   `APP_URL` equal to the HTTPS production origin.
+4. Start the app and use **Settings → Instagram Business connection**. The
+   panel shows the exact redirect URI the server will send to Meta.
 
 During development, the Instagram account must be an app tester or otherwise
 have access to the app. Production use of publishing, comment, and messaging

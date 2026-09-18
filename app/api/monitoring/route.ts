@@ -1,6 +1,11 @@
+import { type NextRequest } from 'next/server';
+
 import type { MonitoringSnapshot } from '@/lib/instagram/types';
 import { getCurrentInstagramAccountId } from '@/lib/server/current-account';
-import { instagramConfiguration } from '@/lib/server/instagram';
+import {
+  instagramConfiguration,
+  instagramRedirectUri,
+} from '@/lib/server/instagram';
 import { isMongoConfigured } from '@/lib/server/mongodb';
 import {
   connectionToView,
@@ -9,13 +14,15 @@ import {
   listJobs,
 } from '@/lib/server/records';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const checkedAt = new Date().toISOString();
-  const config = instagramConfiguration();
+  const origin = request.nextUrl.origin;
+  const config = instagramConfiguration(origin);
+  const redirectUri = config.appUrl ? instagramRedirectUri(origin) : undefined;
   if (!isMongoConfigured()) {
     const snapshot: MonitoringSnapshot = {
       database: 'not-configured',
-      account: connectionToView(null, config.missing),
+      account: connectionToView(null, config.missing, redirectUri),
       totals: { all: 0, completed: 0, failed: 0, blocked: 0, last24Hours: 0 },
       recentJobs: [],
       checkedAt,
@@ -28,7 +35,7 @@ export async function GET() {
     if (!accountId) {
       const snapshot: MonitoringSnapshot = {
         database: 'connected',
-        account: connectionToView(null, config.missing),
+        account: connectionToView(null, config.missing, redirectUri),
         totals: { all: 0, completed: 0, failed: 0, blocked: 0, last24Hours: 0 },
         recentJobs: [],
         checkedAt,
@@ -42,7 +49,7 @@ export async function GET() {
     ]);
     const snapshot: MonitoringSnapshot = {
       database: 'connected',
-      account: connectionToView(connection, config.missing),
+      account: connectionToView(connection, config.missing, redirectUri),
       totals,
       recentJobs,
       checkedAt,
@@ -51,7 +58,7 @@ export async function GET() {
   } catch {
     const snapshot: MonitoringSnapshot = {
       database: 'unavailable',
-      account: connectionToView(null, config.missing),
+      account: connectionToView(null, config.missing, redirectUri),
       totals: { all: 0, completed: 0, failed: 0, blocked: 0, last24Hours: 0 },
       recentJobs: [],
       checkedAt,
