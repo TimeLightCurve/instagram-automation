@@ -4,23 +4,22 @@ const defaultScopes = [
   'instagram_business_manage_comments',
 ];
 
-function normalizeOrigin(value: string | undefined | null) {
+function normalizeOrigin(value: string | undefined) {
   return value?.trim().replace(/\/$/, '') || '';
 }
 
-export function resolveAppUrl(requestOrigin?: string | null) {
+export function resolveAppUrl() {
   return (
-    normalizeOrigin(requestOrigin) ||
     normalizeOrigin(process.env.APP_URL) ||
     normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL)
   );
 }
 
-export function instagramConfiguration(requestOrigin?: string | null) {
+export function instagramConfiguration() {
   const values = {
     appId: process.env.INSTAGRAM_APP_ID?.trim() || '',
     appSecret: process.env.INSTAGRAM_APP_SECRET?.trim() || '',
-    appUrl: resolveAppUrl(requestOrigin),
+    appUrl: resolveAppUrl(),
     graphVersion: process.env.META_GRAPH_API_VERSION?.trim() || 'v26.0',
     scopes: (process.env.INSTAGRAM_SCOPES || defaultScopes.join(','))
       .split(',')
@@ -38,8 +37,8 @@ export function instagramConfiguration(requestOrigin?: string | null) {
   return { ...values, missing, configured: missing.length === 0 };
 }
 
-export function instagramRedirectUri(requestOrigin?: string | null) {
-  const config = instagramConfiguration(requestOrigin);
+export function instagramRedirectUri() {
+  const config = instagramConfiguration();
   return `${config.appUrl}/api/instagram/callback`;
 }
 
@@ -74,16 +73,13 @@ async function metaJson(url: string, init?: RequestInit) {
   return data;
 }
 
-export function createInstagramAuthorizationUrl(
-  state: string,
-  requestOrigin?: string | null,
-) {
-  const config = instagramConfiguration(requestOrigin);
+export function createInstagramAuthorizationUrl(state: string) {
+  const config = instagramConfiguration();
   if (!config.configured)
     throw new Error(`Missing configuration: ${config.missing.join(', ')}`);
   const url = new URL('https://www.instagram.com/oauth/authorize');
   url.searchParams.set('client_id', config.appId);
-  url.searchParams.set('redirect_uri', instagramRedirectUri(requestOrigin));
+  url.searchParams.set('redirect_uri', instagramRedirectUri());
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', config.scopes.join(','));
   url.searchParams.set('state', state);
@@ -92,16 +88,13 @@ export function createInstagramAuthorizationUrl(
   return url;
 }
 
-export async function exchangeInstagramCode(
-  code: string,
-  requestOrigin?: string | null,
-) {
-  const config = instagramConfiguration(requestOrigin);
+export async function exchangeInstagramCode(code: string) {
+  const config = instagramConfiguration();
   const body = new FormData();
   body.set('client_id', config.appId);
   body.set('client_secret', config.appSecret);
   body.set('grant_type', 'authorization_code');
-  body.set('redirect_uri', instagramRedirectUri(requestOrigin));
+  body.set('redirect_uri', instagramRedirectUri());
   body.set('code', code.replace(/#_$/, ''));
   const shortToken = await metaJson(
     'https://api.instagram.com/oauth/access_token',

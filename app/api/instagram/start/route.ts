@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { type NextRequest, NextResponse } from 'next/server';
 
 import {
   createInstagramAuthorizationUrl,
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest) {
       {
         error: 'Instagram connection is not configured.',
         missing: config.missing,
-        redirectUri: config.appUrl ? instagramRedirectUri(origin) : null,
+        redirectUri: config.appUrl ? instagramRedirectUri() : null,
       },
       { status: 503 },
     );
@@ -35,12 +34,12 @@ export async function GET(request: NextRequest) {
 
   const state = createOAuthState();
   const response = NextResponse.redirect(
-    createInstagramAuthorizationUrl(state, origin),
+    createInstagramAuthorizationUrl(state),
   );
   response.cookies.set(oauthStateCookieName, signSessionValue(state), {
     httpOnly: true,
     sameSite: 'lax',
-    secure: isSecureCookie(origin),
+    secure: isSecureCookie(configuredOrigin),
     path: '/',
     maxAge: 10 * 60,
   });

@@ -46,14 +46,12 @@ type PanelStateDocument = {
 export function connectionToView(
   connection: WithId<InstagramConnectionDocument> | null,
   missingConfiguration: string[] = [],
-  redirectUri?: string,
 ): InstagramAccountView {
   if (!connection) {
     return {
       configured: missingConfiguration.length === 0,
       connected: false,
       missingConfiguration,
-      redirectUri,
     };
   }
   return {
@@ -69,7 +67,6 @@ export function connectionToView(
     lastVerifiedAt: connection.lastVerifiedAt.toISOString(),
     status: connection.status,
     missingConfiguration,
-    redirectUri,
   };
 }
 
