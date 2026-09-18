@@ -11,6 +11,8 @@ export type InstagramAccountView = {
   lastVerifiedAt?: string;
   status?: 'connected' | 'expired' | 'disconnected' | 'error';
   missingConfiguration?: string[];
+  /** Exact OAuth redirect URI that must be registered in the Meta app. */
+  redirectUri?: string;
 };
 
 export type JobStatus = 'completed' | 'failed' | 'blocked' | 'running';

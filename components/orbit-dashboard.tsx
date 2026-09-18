@@ -1857,10 +1857,21 @@ function InstagramConnectionCard({
               </p>
             </div>
           ) : account.configured ? (
-            <p className="mt-2 max-w-2xl text-xs leading-5 text-white/40">
-              Sign in on Instagram’s authorization page. Orbit never receives or
-              stores your Instagram password.
-            </p>
+            <div className="mt-2 max-w-2xl space-y-2 text-xs leading-5 text-white/40">
+              <p>
+                Sign in on Instagram’s authorization page. Orbit never receives
+                or stores your Instagram password.
+              </p>
+              {account.redirectUri ? (
+                <p>
+                  Register this exact OAuth redirect URI in Meta → Instagram →
+                  API setup:{' '}
+                  <code className="break-all rounded-md bg-black/20 px-1.5 py-0.5 text-[10px] text-white/55">
+                    {account.redirectUri}
+                  </code>
+                </p>
+              ) : null}
+            </div>
           ) : (
             <div className="mt-2">
               <p className="text-xs text-[#efbd73]">

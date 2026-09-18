@@ -39,15 +39,34 @@ long-lived tokens, encrypted with AES-256-GCM, and stored in MongoDB. The browse
 keeps only a signed, HTTP-only connection cookie.
 
 1. Create a Meta app and select **API setup with Instagram login**.
-2. Add `http://localhost:3000/api/instagram/callback` as a valid OAuth redirect
-   URI for local development. Use the HTTPS production URL on Vercel.
+2. Add these exact OAuth redirect URIs in the Meta App Dashboard (Instagram →
+   API setup with Instagram login → Redirect URI):
+   - Local: `http://localhost:3000/api/instagram/callback`
+   - Vercel: `https://instagram-automation-lake.vercel.app/api/instagram/callback`
+     (use your real production origin; no trailing slash before `/api`)
 3. Copy `.env.example` to `.env.local` and fill in MongoDB, Instagram App, and
-   secret values.
-4. Start the app and use **Settings → Instagram Business connection**.
+   secret values. For local work set `APP_URL=http://localhost:3000`. On Vercel,
+   set the same keys in Project → Settings → Environment Variables with
+   `APP_URL` equal to the HTTPS production origin.
+4. Start the app and use **Settings → Instagram Business connection**. The
+   panel shows the exact redirect URI the server will send to Meta.
 
 During development, the Instagram account must be an app tester or otherwise
 have access to the app. Production use of publishing, comment, and messaging
 permissions may require Meta App Review and Advanced Access.
+
+### Meta webhooks (optional for Connect)
+
+OAuth login does **not** use webhooks. If you complete “Configure webhooks”:
+
+1. Callback URL: `https://instagram-automation-lake.vercel.app/api/instagram/webhook`
+   (not `/api/instagram/callback` — that path is Instagram Login only)
+2. Verify token: any secret string you choose; set the same value as
+   `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` in Vercel (and `.env.local` locally)
+3. Click **Verify and save**
+
+Meta only delivers live webhook events when the app is published; the verify
+handshake still works once the endpoint is deployed.
 
 ## MongoDB and monitoring
 
