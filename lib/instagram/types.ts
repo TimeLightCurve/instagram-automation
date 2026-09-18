@@ -11,6 +11,8 @@ export type InstagramAccountView = {
   lastVerifiedAt?: string;
   status?: 'connected' | 'expired' | 'disconnected' | 'error';
   missingConfiguration?: string[];
+  oauthRedirectUri?: string;
+  webhookCallbackUrl?: string;
 };
 
 export type JobStatus = 'completed' | 'failed' | 'blocked' | 'running';

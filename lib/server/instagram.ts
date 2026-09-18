@@ -31,6 +31,11 @@ export function instagramRedirectUri() {
   return `${config.appUrl}/api/instagram/callback`;
 }
 
+export function instagramWebhookCallbackUrl() {
+  const config = instagramConfiguration();
+  return `${config.appUrl}/api/instagram/webhook`;
+}
+
 async function metaJson(url: string, init?: RequestInit) {
   const response = await fetch(url, {
     ...init,

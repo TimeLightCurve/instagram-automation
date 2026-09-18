@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import {
   createInstagramAuthorizationUrl,
@@ -11,7 +11,7 @@ import {
   signSessionValue,
 } from '@/lib/server/session';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const config = instagramConfiguration();
   if (!config.configured) {
     return Response.json(
@@ -20,6 +20,13 @@ export async function GET() {
         missing: config.missing,
       },
       { status: 503 },
+    );
+  }
+
+  const configuredOrigin = new URL(config.appUrl).origin;
+  if (request.nextUrl.origin !== configuredOrigin) {
+    return NextResponse.redirect(
+      new URL('/api/instagram/start', configuredOrigin),
     );
   }
 

@@ -1,5 +1,9 @@
 import { getCurrentInstagramAccountId } from '@/lib/server/current-account';
-import { instagramConfiguration } from '@/lib/server/instagram';
+import {
+  instagramConfiguration,
+  instagramRedirectUri,
+  instagramWebhookCallbackUrl,
+} from '@/lib/server/instagram';
 import {
   connectionToView,
   getInstagramConnection,
@@ -8,8 +12,17 @@ import {
 
 export async function GET() {
   const config = instagramConfiguration();
+  const setupUrls = config.appUrl
+    ? {
+        oauthRedirectUri: instagramRedirectUri(),
+        webhookCallbackUrl: instagramWebhookCallbackUrl(),
+      }
+    : {};
   if (!config.configured) {
-    return Response.json(connectionToView(null, config.missing));
+    return Response.json({
+      ...connectionToView(null, config.missing),
+      ...setupUrls,
+    });
   }
 
   const accountId = await getCurrentInstagramAccountId();
@@ -22,5 +35,8 @@ export async function GET() {
     await markInstagramConnection(connection.instagramUserId, 'expired');
     connection = await getInstagramConnection(connection.instagramUserId);
   }
-  return Response.json(connectionToView(connection, config.missing));
+  return Response.json({
+    ...connectionToView(connection, config.missing),
+    ...setupUrls,
+  });
 }

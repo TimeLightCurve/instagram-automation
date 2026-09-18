@@ -1857,10 +1857,36 @@ function InstagramConnectionCard({
               </p>
             </div>
           ) : account.configured ? (
-            <p className="mt-2 max-w-2xl text-xs leading-5 text-white/40">
-              Sign in on Instagram’s authorization page. Orbit never receives or
-              stores your Instagram password.
-            </p>
+            <div className="mt-2 max-w-2xl space-y-3 text-xs leading-5 text-white/40">
+              <p>
+                Sign in on Instagram’s authorization page. Orbit never receives
+                or stores your Instagram password.
+              </p>
+              {account.oauthRedirectUri ? (
+                <div className="rounded-xl border border-white/8 bg-black/15 p-3">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/28">
+                    Meta OAuth redirect URI
+                  </p>
+                  <code className="mt-1 block break-all text-[11px] text-[#83dcc5]">
+                    {account.oauthRedirectUri}
+                  </code>
+                  <p className="mt-2 text-[11px] text-white/32">
+                    Register this exact value under Instagram → API setup with
+                    Instagram login. Do not add a trailing slash.
+                  </p>
+                </div>
+              ) : null}
+              {account.webhookCallbackUrl ? (
+                <div className="rounded-xl border border-white/8 bg-black/15 p-3">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/28">
+                    Meta webhook callback URL
+                  </p>
+                  <code className="mt-1 block break-all text-[11px] text-white/60">
+                    {account.webhookCallbackUrl}
+                  </code>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <div className="mt-2">
               <p className="text-xs text-[#efbd73]">

@@ -39,8 +39,9 @@ long-lived tokens, encrypted with AES-256-GCM, and stored in MongoDB. The browse
 keeps only a signed, HTTP-only connection cookie.
 
 1. Create a Meta app and select **API setup with Instagram login**.
-2. Add `http://localhost:3000/api/instagram/callback` as a valid OAuth redirect
-   URI for local development. Use the HTTPS production URL on Vercel.
+2. Set `APP_URL` to the public HTTPS origin and register its exact
+   `/api/instagram/callback` URL under **Instagram → API setup with Instagram
+   login**. The scheme, host, path, and trailing slash must match exactly.
 3. Copy `.env.example` to `.env.local` and fill in MongoDB, Instagram App, and
    secret values.
 4. Start the app and use **Settings → Instagram Business connection**.
@@ -48,6 +49,10 @@ keeps only a signed, HTTP-only connection cookie.
 During development, the Instagram account must be an app tester or otherwise
 have access to the app. Production use of publishing, comment, and messaging
 permissions may require Meta App Review and Advanced Access.
+
+For webhooks, register `APP_URL/api/instagram/webhook` as the callback URL and
+enter the same value as `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` in both Meta and the
+application environment. The webhook URL is separate from the OAuth redirect.
 
 ## MongoDB and monitoring
 
