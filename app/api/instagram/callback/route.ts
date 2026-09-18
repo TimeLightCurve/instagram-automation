@@ -22,7 +22,8 @@ function panelRedirect(request: NextRequest, result: string) {
 
 export async function GET(request: NextRequest) {
   const startedAt = new Date();
-  const config = instagramConfiguration();
+  const requestOrigin = request.nextUrl.origin;
+  const config = instagramConfiguration(requestOrigin);
   const code = request.nextUrl.searchParams.get('code');
   const state = request.nextUrl.searchParams.get('state');
   const errorMessage = request.nextUrl.searchParams.get('error_description');
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const token = await exchangeInstagramCode(code);
+    const token = await exchangeInstagramCode(code, requestOrigin);
     const profile = await getInstagramProfile(token.accessToken);
     await saveInstagramConnection({
       instagramUserId: profile.id,

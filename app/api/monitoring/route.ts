@@ -1,3 +1,5 @@
+import type { NextRequest } from 'next/server';
+
 import type { MonitoringSnapshot } from '@/lib/instagram/types';
 import { getCurrentInstagramAccountId } from '@/lib/server/current-account';
 import { instagramConfiguration } from '@/lib/server/instagram';
@@ -9,9 +11,9 @@ import {
   listJobs,
 } from '@/lib/server/records';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const checkedAt = new Date().toISOString();
-  const config = instagramConfiguration();
+  const config = instagramConfiguration(request.nextUrl.origin);
   if (!isMongoConfigured()) {
     const snapshot: MonitoringSnapshot = {
       database: 'not-configured',

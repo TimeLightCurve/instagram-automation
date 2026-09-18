@@ -13,20 +13,23 @@ import {
 } from '@/lib/server/session';
 
 export async function GET(request: NextRequest) {
-  const config = instagramConfiguration();
+  const requestOrigin = request.nextUrl.origin;
+  const config = instagramConfiguration(requestOrigin);
   if (!config.configured) {
     return Response.json(
       {
         error: 'Instagram connection is not configured.',
         missing: config.missing,
-        redirectUri: config.appUrl ? instagramRedirectUri() : null,
+        redirectUri: config.appUrl
+          ? instagramRedirectUri(requestOrigin)
+          : null,
       },
       { status: 503 },
     );
   }
 
   const configuredOrigin = new URL(config.appUrl).origin;
-  if (request.nextUrl.origin !== configuredOrigin) {
+  if (requestOrigin !== configuredOrigin) {
     return NextResponse.redirect(
       new URL('/api/instagram/start', configuredOrigin),
     );
@@ -34,7 +37,7 @@ export async function GET(request: NextRequest) {
 
   const state = createOAuthState();
   const response = NextResponse.redirect(
-    createInstagramAuthorizationUrl(state),
+    createInstagramAuthorizationUrl(state, requestOrigin),
   );
   response.cookies.set(oauthStateCookieName, signSessionValue(state), {
     httpOnly: true,

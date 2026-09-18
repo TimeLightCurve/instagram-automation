@@ -1,3 +1,5 @@
+import type { NextRequest } from 'next/server'
+
 import { getCurrentInstagramAccountId } from '@/lib/server/current-account'
 import {
   instagramConfiguration,
@@ -10,12 +12,13 @@ import {
   markInstagramConnection,
 } from '@/lib/server/records'
 
-export async function GET() {
-  const config = instagramConfiguration()
+export async function GET(request: NextRequest) {
+  const requestOrigin = request.nextUrl.origin
+  const config = instagramConfiguration(requestOrigin)
   const setupUrls = config.appUrl
     ? {
-        oauthRedirectUri: instagramRedirectUri(),
-        webhookCallbackUrl: instagramWebhookCallbackUrl(),
+        oauthRedirectUri: instagramRedirectUri(requestOrigin),
+        webhookCallbackUrl: instagramWebhookCallbackUrl(requestOrigin),
       }
     : {}
   if (!config.configured) {
