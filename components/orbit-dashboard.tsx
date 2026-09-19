@@ -646,6 +646,7 @@ export function OrbitDashboard() {
               <InboxView
                 account={account}
                 onOpenSetup={() => setSetupDialog(true)}
+                onReconnect={connectInstagram}
               />
             )}
             {view === 'approvals' && (
@@ -1091,9 +1092,11 @@ function ContentView({
 function InboxView({
   account,
   onOpenSetup,
+  onReconnect,
 }: {
   account: InstagramAccountView;
   onOpenSetup: () => void;
+  onReconnect: () => void;
 }) {
   const [conversations, setConversations] = useState<InboxConversation[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
@@ -1345,6 +1348,11 @@ function InboxView({
       {!account.connected ? (
         <Button onClick={onOpenSetup} variant="outline">
           See connection path
+        </Button>
+      ) : null}
+      {account.connected && !hasPermission ? (
+        <Button onClick={onReconnect} variant="outline">
+          Reconnect Instagram for messages
         </Button>
       ) : null}
     </div>
