@@ -24,7 +24,7 @@ async function request(url: string, token: string, init?: RequestInit) {
       ...init,
       headers,
       cache: 'no-store',
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(init?.method === 'POST' ? 120_000 : 12_000),
     });
   } catch {
     throw new Error(
