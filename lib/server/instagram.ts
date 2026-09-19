@@ -138,6 +138,16 @@ export async function exchangeInstagramCode(
   );
   if (typeof shortToken.access_token !== 'string')
     throw new Error('Instagram did not return an access token.');
+  const grantedScopes = Array.isArray(shortToken.permissions)
+    ? shortToken.permissions.filter(
+        (scope): scope is string => typeof scope === 'string',
+      )
+    : typeof shortToken.permissions === 'string'
+      ? shortToken.permissions
+          .split(',')
+          .map((scope) => scope.trim())
+          .filter(Boolean)
+      : null;
 
   const exchange = new URL('https://graph.instagram.com/access_token');
   exchange.searchParams.set('grant_type', 'ig_exchange_token');
@@ -148,6 +158,7 @@ export async function exchangeInstagramCode(
     throw new Error('Instagram did not return a long-lived token.');
   return {
     accessToken: longToken.access_token,
+    grantedScopes,
     expiresIn:
       typeof longToken.expires_in === 'number'
         ? longToken.expires_in

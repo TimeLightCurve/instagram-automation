@@ -7,6 +7,7 @@ export type InstagramAccountView = {
   accountType?: string
   profilePictureUrl?: string
   scopes?: string[]
+  scopesVerified?: boolean
   tokenExpiresAt?: string
   lastVerifiedAt?: string
   status?: 'connected' | 'expired' | 'disconnected' | 'error'

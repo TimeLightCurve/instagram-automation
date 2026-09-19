@@ -16,6 +16,7 @@ export type InstagramConnectionDocument = {
   profilePictureUrl: string;
   encryptedAccessToken?: string;
   scopes: string[];
+  scopesVerified?: boolean;
   tokenIssuedAt?: Date;
   tokenExpiresAt?: Date;
   lastVerifiedAt: Date;
@@ -64,6 +65,7 @@ export function connectionToView(
     accountType: connection.accountType,
     profilePictureUrl: connection.profilePictureUrl,
     scopes: connection.scopes,
+    scopesVerified: connection.scopesVerified ?? false,
     tokenExpiresAt: connection.tokenExpiresAt?.toISOString(),
     lastVerifiedAt: connection.lastVerifiedAt.toISOString(),
     status: connection.status,
@@ -79,6 +81,7 @@ export async function saveInstagramConnection(input: {
   profilePictureUrl: string;
   accessToken: string;
   scopes: string[];
+  scopesVerified: boolean;
   expiresIn: number;
 }) {
   const database = await getDatabase();
@@ -96,6 +99,7 @@ export async function saveInstagramConnection(input: {
           profilePictureUrl: input.profilePictureUrl,
           encryptedAccessToken: encryptSecret(input.accessToken),
           scopes: input.scopes,
+          scopesVerified: input.scopesVerified,
           tokenIssuedAt: now,
           tokenExpiresAt,
           lastVerifiedAt: now,

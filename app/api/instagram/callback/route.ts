@@ -62,7 +62,8 @@ export async function GET(request: NextRequest) {
       accountType: profile.accountType,
       profilePictureUrl: profile.profilePictureUrl,
       accessToken: token.accessToken,
-      scopes: config.scopes,
+      scopes: token.grantedScopes ?? config.scopes,
+      scopesVerified: token.grantedScopes !== null,
       expiresIn: token.expiresIn,
     });
     await recordJobSafe({

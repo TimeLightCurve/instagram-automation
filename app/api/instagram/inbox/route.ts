@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import {
+  inspectInstagramInbox,
   listInstagramConversations,
   listInstagramMessages,
 } from '@/lib/server/inbox';
@@ -16,9 +17,12 @@ export async function GET(request: NextRequest) {
   const conversationId = request.nextUrl.searchParams.get('conversationId');
   const after = request.nextUrl.searchParams.get('after');
   try {
-    const data = conversationId
-      ? await listInstagramMessages(accountId, conversationId, after)
-      : await listInstagramConversations(accountId, after);
+    const data =
+      request.nextUrl.searchParams.get('diagnose') === '1'
+        ? await inspectInstagramInbox(accountId)
+        : conversationId
+          ? await listInstagramMessages(accountId, conversationId, after)
+          : await listInstagramConversations(accountId, after);
     return Response.json(data, {
       headers: { 'Cache-Control': 'private, no-store' },
     });

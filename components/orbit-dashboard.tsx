@@ -1106,6 +1106,41 @@ function InboxView({
   const [loading, setLoading] = useState(false);
   const [messageLoading, setMessageLoading] = useState(false);
   const [error, setError] = useState('');
+  const [diagnostics, setDiagnostics] = useState('');
+  const [diagnosing, setDiagnosing] = useState(false);
+
+  async function diagnoseInbox() {
+    setDiagnosing(true);
+    try {
+      const response = await fetch('/api/instagram/inbox?diagnose=1', {
+        cache: 'no-store',
+      });
+      const data = (await response.json()) as {
+        identityMatches?: boolean;
+        identifiersDiffer?: boolean;
+        checks?: Array<{ route: string; count?: number; error?: string }>;
+        error?: string;
+      };
+      if (!response.ok)
+        throw new Error(data.error || 'Could not inspect Meta inbox access.');
+      const result =
+        data.checks
+          ?.map(
+            (check) =>
+              `${check.route}: ${check.error || `${check.count ?? 0} conversations`}`,
+          )
+          .join(' · ') || 'No checks returned';
+      setDiagnostics(
+        `Connected identity ${data.identityMatches ? 'matches' : 'differs from'} Meta profile${data.identifiersDiffer ? ' (Meta returned two ID formats)' : ''}. ${result}. If every route returns zero, check Meta app access, account webhook subscription, and whether the other person initiated the DM.`,
+      );
+    } catch (cause) {
+      setDiagnostics(
+        cause instanceof Error ? cause.message : 'Diagnostic request failed.',
+      );
+    } finally {
+      setDiagnosing(false);
+    }
+  }
 
   async function loadConversations(after?: string) {
     setLoading(true);
@@ -1345,6 +1380,23 @@ function InboxView({
           </div>
         </section>
       </div>
+      {account.connected && hasPermission ? (
+        <div className="rounded-xl border border-white/8 bg-[#111216] p-4 text-xs text-white/55">
+          <Button
+            disabled={diagnosing}
+            onClick={() => void diagnoseInbox()}
+            size="sm"
+            variant="outline"
+          >
+            {diagnosing ? 'Checking Meta…' : 'Diagnose empty inbox'}
+          </Button>
+          {diagnostics ? (
+            <p aria-live="polite" className="mt-3 leading-5">
+              {diagnostics}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {!account.connected ? (
         <Button onClick={onOpenSetup} variant="outline">
           See connection path
@@ -1997,8 +2049,10 @@ function InstagramConnectionCard({
                 <code className="select-all text-white/70">{account.id}</code>
               </p>
               <p>
-                Scopes requested at connection:{' '}
-                {(account.scopes ?? []).join(', ') || 'Not reported'}
+                {account.scopesVerified
+                  ? 'Scopes granted by Meta'
+                  : 'Scopes requested at connection (grant unverified)'}
+                : {(account.scopes ?? []).join(', ') || 'Not reported'}
               </p>
               {!account.scopes?.includes(
                 'instagram_business_manage_messages',

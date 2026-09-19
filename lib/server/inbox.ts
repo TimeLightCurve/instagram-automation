@@ -55,7 +55,70 @@ async function graphPage<T>(path: string, token: string, after: string | null) {
   const result = await metaJson(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (!Array.isArray(result.data)) {
+    throw new Error('Instagram returned an unexpected conversation response.');
+  }
   return result as GraphPage<T>;
+}
+
+// Instagram Login exposes both /me and a numeric user_id. Some accounts return
+// different identifiers for these fields; checking both read paths lets the
+// panel distinguish an empty API result from a stale stored identity.
+export async function inspectInstagramInbox(accountId: string) {
+  const token = await accountToken(accountId);
+  const configuration = instagramConfiguration();
+  const profile = new URL(
+    `https://graph.instagram.com/${configuration.graphVersion}/me`,
+  );
+  profile.searchParams.set('fields', 'id,user_id');
+  const identity = await metaJson(profile.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const meId =
+    typeof identity.id === 'string' || typeof identity.id === 'number'
+      ? String(identity.id)
+      : '';
+  const userId =
+    typeof identity.user_id === 'string' || typeof identity.user_id === 'number'
+      ? String(identity.user_id)
+      : '';
+  const routes = ['me', ...new Set([accountId, meId, userId].filter(Boolean))];
+  const checks = await Promise.all(
+    routes.map(async (route) => {
+      try {
+        const page = await graphPage<GraphConversation>(
+          `${encodeURIComponent(route)}/conversations?platform=instagram&fields=id`,
+          token,
+          null,
+        );
+        return {
+          route:
+            route === 'me'
+              ? 'me'
+              : route === accountId
+                ? 'connected account'
+                : 'profile ID',
+          count: page.data?.length ?? 0,
+          hasMore: Boolean(page.paging?.next),
+        };
+      } catch (error) {
+        return {
+          route:
+            route === 'me'
+              ? 'me'
+              : route === accountId
+                ? 'connected account'
+                : 'profile ID',
+          error: error instanceof Error ? error.message : 'Meta request failed',
+        };
+      }
+    }),
+  );
+  return {
+    identityMatches: accountId === meId || accountId === userId,
+    identifiersDiffer: Boolean(meId && userId && meId !== userId),
+    checks,
+  };
 }
 
 export async function listInstagramConversations(
@@ -63,11 +126,22 @@ export async function listInstagramConversations(
   after: string | null,
 ) {
   const token = await accountToken(accountId);
-  const page = await graphPage<GraphConversation>(
-    `${encodeURIComponent(accountId)}/conversations?platform=instagram&fields=id,updated_time,participants`,
+  const path =
+    'conversations?platform=instagram&fields=id,updated_time,participants';
+  const usingMe = after?.startsWith('me.') ?? false;
+  const next = cursor(usingMe ? after!.slice(3) : after);
+  let source: 'account' | 'me' = usingMe ? 'me' : 'account';
+  let page = await graphPage<GraphConversation>(
+    `${usingMe ? 'me' : encodeURIComponent(accountId)}/${path}`,
     token,
-    cursor(after),
+    next,
   );
+  // Keep each page on the same Meta edge. Only fall back when the first
+  // explicit-account page is empty; the cursor prefix remains server-owned.
+  if (!after && !page.data?.length) {
+    page = await graphPage<GraphConversation>(`me/${path}`, token, null);
+    source = 'me';
+  }
   return {
     conversations: (page.data ?? []).map((item) => ({
       id: item.id,
@@ -76,7 +150,9 @@ export async function listInstagramConversations(
         (person) => person.id !== accountId,
       ),
     })),
-    nextCursor: page.paging?.next ? (page.paging.cursors?.after ?? null) : null,
+    nextCursor: page.paging?.next && page.paging.cursors?.after
+      ? `${source === 'me' ? 'me.' : ''}${page.paging.cursors.after}`
+      : null,
   };
 }
 
