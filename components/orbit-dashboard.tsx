@@ -1068,9 +1068,9 @@ function ContentView({
             <Image
               alt="Draft post artwork"
               className="w-full rounded-xl"
-              height={1080}
+              height={752}
               src={selected.mediaUrl}
-              width={1080}
+              width={1344}
             />
           ) : null}
           <p className="whitespace-pre-wrap text-sm leading-6 text-white/75">
