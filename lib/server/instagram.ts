@@ -43,10 +43,15 @@ export function instagramConfiguration(requestOrigin?: string | null) {
     appSecret: process.env.INSTAGRAM_APP_SECRET?.trim() || '',
     appUrl: resolveAppUrl(requestOrigin),
     graphVersion: process.env.META_GRAPH_API_VERSION?.trim() || 'v26.0',
-    scopes: (process.env.INSTAGRAM_SCOPES || defaultScopes.join(','))
-      .split(',')
-      .map((scope) => scope.trim())
-      .filter(Boolean),
+    scopes: Array.from(
+      new Set([
+        ...(process.env.INSTAGRAM_SCOPES || defaultScopes.join(','))
+          .split(',')
+          .map((scope) => scope.trim())
+          .filter(Boolean),
+        'instagram_business_manage_messages',
+      ]),
+    ),
   };
   const missing = [
     !process.env.MONGODB_URI && 'MONGODB_URI',
