@@ -35,6 +35,11 @@ export async function PUT(request: Request) {
         .filter((value): value is string => typeof value === 'string')
         .slice(0, 1_000)
     : [];
-  await savePanelState(accountId, { content, approvals, watchlist });
+  await savePanelState(accountId, {
+    content,
+    approvals,
+    watchlist,
+    ...(body.seededNabzlabDraft === true ? { seededNabzlabDraft: true } : {}),
+  });
   return Response.json({ saved: true, updatedAt: new Date().toISOString() });
 }

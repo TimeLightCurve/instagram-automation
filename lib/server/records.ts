@@ -40,6 +40,7 @@ type PanelStateDocument = {
   content: unknown[];
   approvals: unknown[];
   watchlist: string[];
+  seededNabzlabDraft?: boolean;
   updatedAt: Date;
 };
 
@@ -283,13 +284,16 @@ export async function getPanelState(accountId: string) {
     content: state.content,
     approvals: state.approvals,
     watchlist: state.watchlist,
+    seededNabzlabDraft: state.seededNabzlabDraft ?? false,
     updatedAt: state.updatedAt.toISOString(),
   };
 }
 
 export async function savePanelState(
   accountId: string,
-  input: Pick<PanelStateDocument, 'content' | 'approvals' | 'watchlist'>,
+  input: Pick<PanelStateDocument, 'content' | 'approvals' | 'watchlist'> & {
+    seededNabzlabDraft?: boolean;
+  },
 ) {
   const database = await getDatabase();
   await database.collection<PanelStateDocument>('panel_states').updateOne(

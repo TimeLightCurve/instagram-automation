@@ -1,7 +1,6 @@
 import {
   HumanApprovalNode,
   MetaCapabilityNode,
-  StoreDraftNode,
   ValidateContentNode,
 } from './nodes';
 import { WorkflowEngine } from './engine';
@@ -10,9 +9,9 @@ export const workflowCatalog = [
   {
     id: 'content-prep',
     name: 'Content preparation',
-    description: 'Validate captions and store ready-to-publish drafts.',
+    description: 'Validate caption text before saving a draft in the panel.',
     requiresProfessional: false,
-    nodes: ['Validate content', 'Store draft'],
+    nodes: ['Validate content'],
   },
   {
     id: 'manual-engagement',
@@ -43,7 +42,6 @@ export function getWorkflowEngine(workflowId: string) {
   if (workflowId === 'content-prep') {
     return new WorkflowEngine([
       new ValidateContentNode('validate-content', 'Validate content'),
-      new StoreDraftNode('store-draft', 'Store draft'),
     ]);
   }
 

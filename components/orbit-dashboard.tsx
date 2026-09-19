@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { SyntheticEvent } from 'react';
+import Image from 'next/image';
 import {
   Activity,
   ArrowUpRight,
@@ -29,8 +30,6 @@ import {
   PencilLine,
   Plus,
   RefreshCw,
-  Search,
-  Send,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -56,6 +55,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { defaultLocalAiSettings } from '@/lib/local-ai/types';
+import { generateLocalCaption, localAiModels } from '@/lib/local-ai/browser';
 import type { LocalAiProvider, LocalAiSettings } from '@/lib/local-ai/types';
 import type {
   InstagramAccountView,
@@ -81,6 +81,21 @@ type ContentItem = {
   status: ContentStatus;
   scheduled: string;
   caption: string;
+  mediaUrl?: string;
+};
+
+type InboxConversation = {
+  id: string;
+  updatedAt: string | null;
+  participants: Array<{ id: string; username?: string; name?: string }>;
+};
+
+type InboxMessage = {
+  id: string;
+  text: string;
+  createdAt: string | null;
+  from: { id: string; username?: string } | null;
+  attachments: Array<{ type: string; url: string | null }>;
 };
 
 type ApprovalItem = {
@@ -104,152 +119,49 @@ const navItems: Array<{
 }> = [
   { label: 'Overview', value: 'overview', icon: Home },
   { label: 'Content', value: 'content', icon: FileText },
-  { label: 'Inbox', value: 'inbox', icon: MessageCircle, count: 7 },
+  { label: 'Inbox', value: 'inbox', icon: MessageCircle },
   { label: 'Approvals', value: 'approvals', icon: MousePointer2 },
   { label: 'Audience', value: 'audience', icon: Users },
   { label: 'Automations', value: 'automations', icon: WandSparkles },
   { label: 'Activity', value: 'activity', icon: Activity },
 ];
 
-const initialContent: ContentItem[] = [
-  {
-    id: 'c1',
-    title: 'Product carousel',
-    format: 'Carousel',
-    status: 'Ready',
-    scheduled: 'Sep 15 · 09:30',
-    caption: 'A closer look at the system behind the work.',
-  },
-  {
-    id: 'c2',
-    title: 'Behind the scenes',
-    format: 'Reel',
-    status: 'Needs media',
-    scheduled: 'Sep 15 · 13:00',
-    caption: 'The quiet details that shape the final result.',
-  },
-  {
-    id: 'c3',
-    title: 'Founder note',
-    format: 'Post',
-    status: 'Draft',
-    scheduled: 'Sep 15 · 18:45',
-    caption: 'What we learned while building this week.',
-  },
-  {
-    id: 'c4',
-    title: 'Weekly recap',
-    format: 'Story',
-    status: 'Ready',
-    scheduled: 'Sep 17 · 10:15',
-    caption: 'Three moments worth remembering.',
-  },
-];
+const nabzlabDraft: ContentItem = {
+  id: 'nabzlab-nava-consent-concept-2026',
+  title: 'Nava · pocket recorder study',
+  format: 'Post',
+  status: 'Draft',
+  scheduled: 'Unscheduled',
+  mediaUrl: '/nava-concept-ripple-v1.png',
+  caption:
+    'Meet Nava: a pocket recorder study for turning conversations into useful memory, on your terms.\n\nWe are exploring a simple idea: keep the source, review the transcript, and choose what becomes searchable. Consent and human control guide the experience.\n\nJoin the Nava pilot list at nabzlab.com. No payment today.\n\nConcept study, not final hardware. Specifications, price and delivery window follow Rev-A validation.\n\n#NabzLab #Nava #PrivateAI',
+};
 
-const initialApprovals: ApprovalItem[] = [
-  {
-    id: 'a1',
-    initials: 'LM',
-    handle: '@lumen.studio',
-    action: 'Comment',
-    context: 'New launch teaser',
-    draft:
-      'The lighting on this is beautiful — excited to see the full collection.',
-    age: '8m',
-    url: 'https://www.instagram.com/lumen.studio/',
-    tone: 'bg-[#ddc7ff] text-[#40206d]',
-    state: 'pending',
-  },
-  {
-    id: 'a2',
-    initials: 'NS',
-    handle: '@northstar.design',
-    action: 'Follow',
-    context: 'Relevant creator · 18.4k',
-    draft: 'Strong match for your design and founder audience.',
-    age: '24m',
-    url: 'https://www.instagram.com/northstar.design/',
-    tone: 'bg-[#bceee4] text-[#164f46]',
-    state: 'pending',
-  },
-  {
-    id: 'a3',
-    initials: 'AK',
-    handle: '@atelier.kanso',
-    action: 'Like',
-    context: 'Carousel · product process',
-    draft: 'Saved from your monitored accounts list.',
-    age: '1h',
-    url: 'https://www.instagram.com/atelier.kanso/',
-    tone: 'bg-[#ffd3bd] text-[#76351b]',
-    state: 'pending',
-  },
-  {
-    id: 'a4',
-    initials: 'FD',
-    handle: '@form.daily',
-    action: 'Comment',
-    context: 'Studio process reel',
-    draft:
-      'This is such a thoughtful way to show the process. The pacing works beautifully.',
-    age: '2h',
-    url: 'https://www.instagram.com/form.daily/',
-    tone: 'bg-[#c6d8ff] text-[#263e75]',
-    state: 'pending',
-  },
-];
-
-const inboxItems = [
-  {
-    initials: 'MC',
-    name: 'Maya Chen',
-    handle: '@mayamakes',
-    message: 'Do you ship internationally?',
-    time: '11:42',
-    unread: true,
-  },
-  {
-    initials: 'JL',
-    name: 'Jonas Lee',
-    handle: '@jonaslee',
-    message: 'That carousel was incredibly useful — thank you!',
-    time: '10:18',
-    unread: true,
-  },
-  {
-    initials: 'SR',
-    name: 'Sara Rahimi',
-    handle: '@sara.builds',
-    message: 'Can I get the guide you mentioned?',
-    time: 'Yesterday',
-    unread: false,
-  },
-  {
-    initials: 'OA',
-    name: 'Owen Arts',
-    handle: '@owenarts',
-    message: 'Sent a reel',
-    time: 'Mon',
-    unread: false,
-  },
-];
+const demoContentIds = new Set(['c1', 'c2', 'c3', 'c4']);
+const demoApprovalIds = new Set(['a1', 'a2', 'a3', 'a4']);
+const demoWatchlist = new Set([
+  '@lumen.studio',
+  '@northstar.design',
+  '@atelier.kanso',
+]);
 
 const workflowItems = [
   {
     id: 'content-prep',
-    title: 'Content preparation',
-    description: 'Validate captions, organize metadata, and store drafts.',
-    nodes: ['Validate', 'Prepare', 'Store'],
+    title: 'Caption validation',
+    description: 'Validate caption text before saving a draft.',
+    nodes: ['Validate'],
     locked: false,
     enabled: true,
   },
   {
     id: 'manual-engagement',
     title: 'Manual engagement approval',
-    description: 'Queue unrelated likes, follows, and comments for a human.',
+    description:
+      'Approval UI is available. Automatic discovery and queue creation are not connected.',
     nodes: ['Discover', 'Draft', 'Approve'],
-    locked: false,
-    enabled: true,
+    locked: true,
+    enabled: false,
   },
   {
     id: 'official-publish',
@@ -341,21 +253,14 @@ function StatusBadge({ status }: { status: ContentStatus }) {
 /* oxlint-disable react/react-compiler, react-hooks/exhaustive-deps -- synchronize account and MongoDB state with external services */
 export function OrbitDashboard() {
   const [view, setView] = useState<ViewKey>('overview');
-  const [content, setContent, contentHydrated] = useStoredState<ContentItem[]>(
-    'orbit-content',
-    initialContent,
-  );
-  const [approvals, setApprovals, approvalsHydrated] = useStoredState<
-    ApprovalItem[]
-  >('orbit-approvals', initialApprovals);
-  const [watchlist, setWatchlist, watchlistHydrated] = useStoredState<string[]>(
-    'orbit-watchlist',
-    ['@lumen.studio', '@northstar.design', '@atelier.kanso'],
-  );
+  const [content, setContent] = useState<ContentItem[]>([]);
+  const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
   const [localAi, setLocalAi] = useStoredState<LocalAiSettings>(
     'orbit-local-ai',
     defaultLocalAiSettings,
   );
+  const [localAiToken, setLocalAiToken] = useState('');
   const [contentDialog, setContentDialog] = useState(false);
   const [setupDialog, setSetupDialog] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
@@ -388,17 +293,13 @@ export function OrbitDashboard() {
   }, []);
 
   useEffect(() => {
-    if (
-      !account.connected ||
-      !account.id ||
-      !contentHydrated ||
-      !approvalsHydrated ||
-      !watchlistHydrated
-    )
-      return;
+    if (!account.connected || !account.id) return;
 
     let cancelled = false;
     setServerStateAccount(null);
+    setContent([]);
+    setApprovals([]);
+    setWatchlist([]);
     void fetch('/api/panel-state')
       .then(async (response) => {
         if (!response.ok) throw new Error('Could not load MongoDB panel data.');
@@ -407,41 +308,64 @@ export function OrbitDashboard() {
             content?: ContentItem[];
             approvals?: ApprovalItem[];
             watchlist?: string[];
+            seededNabzlabDraft?: boolean;
           };
         }>;
       })
       .then(async ({ state }) => {
         if (cancelled) return;
-        if (state) {
-          if (Array.isArray(state.content)) setContent(state.content);
-          if (Array.isArray(state.approvals)) setApprovals(state.approvals);
-          if (Array.isArray(state.watchlist)) setWatchlist(state.watchlist);
-        } else {
-          await fetch('/api/panel-state', {
+        const storedContent = Array.isArray(state?.content)
+          ? state.content.filter((item) => !demoContentIds.has(item.id))
+          : [];
+        const storedApprovals = Array.isArray(state?.approvals)
+          ? state.approvals.filter((item) => !demoApprovalIds.has(item.id))
+          : [];
+        const storedWatchlist = Array.isArray(state?.watchlist)
+          ? state.watchlist.filter((item) => !demoWatchlist.has(item))
+          : [];
+        const seedDraft =
+          account.username?.toLowerCase() === 'nabzlabai' &&
+          !state?.seededNabzlabDraft;
+        if (
+          seedDraft &&
+          !storedContent.some((item) => item.id === nabzlabDraft.id)
+        )
+          storedContent.push(nabzlabDraft);
+        setContent(storedContent);
+        setApprovals(storedApprovals);
+        setWatchlist(storedWatchlist);
+        if (
+          !state ||
+          storedContent.length !== state.content?.length ||
+          storedApprovals.length !== state.approvals?.length ||
+          storedWatchlist.length !== state.watchlist?.length ||
+          seedDraft
+        ) {
+          const saved = await fetch('/api/panel-state', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content, approvals, watchlist }),
+            body: JSON.stringify({
+              content: storedContent,
+              approvals: storedApprovals,
+              watchlist: storedWatchlist,
+              ...(seedDraft ? { seededNabzlabDraft: true } : {}),
+            }),
           });
+          if (!saved.ok) throw new Error('Could not save cleaned panel data.');
         }
         if (!cancelled) setServerStateAccount(account.id ?? null);
       })
       .catch(() => {
         if (!cancelled)
           showNotice(
-            'MongoDB sync is temporarily unavailable. Local data is preserved.',
+            'MongoDB sync is temporarily unavailable. Changes may not be saved.',
           );
       });
 
     return () => {
       cancelled = true;
     };
-  }, [
-    account.connected,
-    account.id,
-    approvalsHydrated,
-    contentHydrated,
-    watchlistHydrated,
-  ]);
+  }, [account.connected, account.id, account.username]);
 
   useEffect(() => {
     if (!account.id || serverStateAccount !== account.id) return;
@@ -543,9 +467,7 @@ export function OrbitDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workflowId: id,
-          accountMode: account.connected ? 'professional' : 'personal',
-          approved: true,
-          payload: { caption: 'Prepared caption' },
+          payload: { caption: 'Sample caption for validation' },
         }),
       });
       const data = (await response.json()) as {
@@ -660,8 +582,15 @@ export function OrbitDashboard() {
               <PanelLeft />
             </Button>
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/35">
-                Monday, September 14
+              <p
+                suppressHydrationWarning
+                className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/35"
+              >
+                {new Intl.DateTimeFormat('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                }).format(new Date())}
               </p>
               <h1 className="mt-0.5 text-lg font-semibold tracking-tight">
                 {activeLabel}
@@ -723,7 +652,6 @@ export function OrbitDashboard() {
               <ApprovalsView
                 approvals={approvals}
                 onOpen={openManualAction}
-                onReset={() => setApprovals(initialApprovals)}
                 onUpdate={updateApproval}
               />
             )}
@@ -755,7 +683,9 @@ export function OrbitDashboard() {
                 account={account}
                 accountLoading={accountLoading}
                 localAi={localAi}
+                localAiToken={localAiToken}
                 onChange={setLocalAi}
+                onTokenChange={setLocalAiToken}
                 onConnect={connectInstagram}
                 onDisconnect={disconnectInstagram}
                 onOpenSetup={() => setSetupDialog(true)}
@@ -767,8 +697,10 @@ export function OrbitDashboard() {
       </div>
 
       <NewContentDialog
+        accountConnected={account.connected}
         content={content}
         localAi={localAi}
+        localAiToken={localAiToken}
         onChange={setContent}
         onOpenChange={setContentDialog}
         open={contentDialog}
@@ -810,8 +742,8 @@ function UpgradeBanner({
               @{account.username} is connected
             </h2>
             <p className="mt-1 text-sm leading-6 text-[#94bdb2]">
-              Connection details, panel data, and job history are stored
-              securely in MongoDB.
+              Connection details, panel data, and job history are stored in
+              MongoDB.
             </p>
           </div>
           <Badge
@@ -834,19 +766,19 @@ function UpgradeBanner({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-medium text-[#fff6e8]">
-              Unlock automatic publishing & inbox
+              Connect an Instagram professional account
             </h2>
             <Badge
               variant="outline"
               className="border-[#f3ad53]/20 text-[#dca75f]"
             >
-              Optional
+              Setup
             </Badge>
           </div>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[#c8af8c]">
-            Your personal account supports planning and human-approved
-            engagement here. Convert to Creator or Business later to connect the
-            official Meta API.
+            Connect a Creator or Business account to review eligible messages
+            and manage account-specific drafts. Publishing and automated
+            engagement remain disabled.
           </p>
         </div>
         <div className="flex gap-2">
@@ -1047,6 +979,7 @@ function ContentView({
   onCreate: () => void;
   onRemove: (id: string) => void;
 }) {
+  const [selected, setSelected] = useState<ContentItem | null>(null);
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -1080,9 +1013,13 @@ function ContentView({
               key={item.id}
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white/85">
+                <button
+                  className="truncate text-left text-sm font-medium text-white/85 hover:text-white"
+                  onClick={() => setSelected(item)}
+                  type="button"
+                >
                   {item.title}
-                </p>
+                </button>
                 <p className="mt-1 truncate text-xs text-white/35">
                   {item.caption}
                 </p>
@@ -1107,12 +1044,50 @@ function ContentView({
               </Button>
             </article>
           ))}
+          {content.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-white/40">
+              No content drafts yet. Create one to start your plan.
+            </p>
+          ) : null}
         </div>
       </div>
+      <Dialog
+        open={Boolean(selected)}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto border border-white/10 bg-[#17181d] text-white sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{selected?.title}</DialogTitle>
+            <DialogDescription>
+              Draft for review. Nothing has been published.
+            </DialogDescription>
+          </DialogHeader>
+          {selected?.mediaUrl ? (
+            <Image
+              alt="Draft post artwork"
+              className="w-full rounded-xl"
+              height={1080}
+              src={selected.mediaUrl}
+              width={1080}
+            />
+          ) : null}
+          <p className="whitespace-pre-wrap text-sm leading-6 text-white/75">
+            {selected?.caption}
+          </p>
+          <DialogFooter>
+            <Button onClick={() => setSelected(null)} variant="outline">
+              Close review
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
+/* oxlint-disable react/react-compiler -- load conversations when the connected account changes */
 function InboxView({
   account,
   onOpenSetup,
@@ -1120,136 +1095,270 @@ function InboxView({
   account: InstagramAccountView;
   onOpenSetup: () => void;
 }) {
-  const [selected, setSelected] = useState(0);
+  const [conversations, setConversations] = useState<InboxConversation[]>([]);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [messageCursor, setMessageCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function loadConversations(after?: string) {
+    setLoading(true);
+    setError('');
+    try {
+      const query = after ? `?after=${encodeURIComponent(after)}` : '';
+      const response = await fetch(`/api/instagram/inbox${query}`, {
+        cache: 'no-store',
+      });
+      const data = (await response.json()) as {
+        conversations?: InboxConversation[];
+        nextCursor?: string | null;
+        error?: string;
+      };
+      if (!response.ok)
+        throw new Error(data.error || 'Could not load conversations.');
+      setConversations((current) =>
+        after
+          ? [...current, ...(data.conversations ?? [])]
+          : (data.conversations ?? []),
+      );
+      setNextCursor(data.nextCursor ?? null);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'Could not load conversations.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadMessages(id: string, after?: string) {
+    setMessageLoading(true);
+    setError('');
+    try {
+      const query = new URLSearchParams({ conversationId: id });
+      if (after) query.set('after', after);
+      const response = await fetch(`/api/instagram/inbox?${query}`, {
+        cache: 'no-store',
+      });
+      const data = (await response.json()) as {
+        messages?: InboxMessage[];
+        nextCursor?: string | null;
+        error?: string;
+      };
+      if (!response.ok)
+        throw new Error(data.error || 'Could not load messages.');
+      setMessages((current) =>
+        after ? [...current, ...(data.messages ?? [])] : (data.messages ?? []),
+      );
+      setMessageCursor(data.nextCursor ?? null);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : 'Could not load messages.',
+      );
+    } finally {
+      setMessageLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (
+      account.connected &&
+      account.id &&
+      account.scopes?.includes('instagram_business_manage_messages')
+    ) {
+      void loadConversations();
+    }
+  }, [account.connected, account.id, account.scopes]);
+
+  const active = conversations.find((item) => item.id === selected);
+  const participant = active?.participants[0];
+  const hasPermission = account.scopes?.includes(
+    'instagram_business_manage_messages',
+  );
   return (
     <div className="space-y-5">
       <div>
         <p className="eyebrow">Owned-account conversations</p>
-        <h2 className="page-title">Inbox preview</h2>
+        <h2 className="page-title">Instagram inbox</h2>
         <p className="page-copy">
           {account.connected
-            ? 'Your professional account is connected. Live message ingestion still needs its webhook worker.'
-            : 'The interface is ready; live messages stay disconnected while this is a personal account.'}
+            ? 'Eligible conversations returned by Meta for this connected account. Older Requests and some history may be unavailable.'
+            : 'Connect a professional Instagram account to view eligible conversations.'}
         </p>
       </div>
       <div className="grid min-h-[590px] overflow-hidden rounded-2xl border border-white/8 bg-[#111216] md:grid-cols-[310px_minmax(0,1fr)]">
         <section className="border-b border-white/8 md:border-b-0 md:border-r">
-          <div className="border-b border-white/8 p-4">
-            <div className="flex h-9 items-center gap-2 rounded-lg border border-white/8 bg-white/[0.025] px-3 text-white/35">
-              <Search className="size-4" />
-              <span className="text-xs">Search conversations</span>
-            </div>
+          <div className="flex items-center justify-between border-b border-white/8 p-4">
+            <span className="text-xs text-white/55">Conversations</span>
+            <Button
+              aria-label="Refresh inbox"
+              disabled={loading || !hasPermission}
+              onClick={() => void loadConversations()}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <RefreshCw className={loading ? 'animate-spin' : ''} />
+            </Button>
           </div>
           <div>
-            {inboxItems.map((item, index) => (
-              <button
-                className={`flex w-full gap-3 border-b border-white/6 p-4 text-left ${selected === index ? 'bg-white/6' : 'hover:bg-white/[0.025]'}`}
-                key={item.handle}
-                onClick={() => setSelected(index)}
-                type="button"
-              >
-                <div className="grid size-9 shrink-0 place-items-center rounded-full bg-[#252730] text-[10px] font-medium text-white/60">
-                  {item.initials}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center">
-                    <span className="truncate text-xs font-medium text-white/80">
-                      {item.name}
-                    </span>
-                    <span className="ml-auto text-[10px] text-white/28">
-                      {item.time}
-                    </span>
+            {conversations.map((item) => {
+              const person = item.participants[0];
+              return (
+                <button
+                  className={`flex w-full gap-3 border-b border-white/6 p-4 text-left ${selected === item.id ? 'bg-white/6' : 'hover:bg-white/[0.025]'}`}
+                  key={item.id}
+                  onClick={() => {
+                    setSelected(item.id);
+                    setMessages([]);
+                    void loadMessages(item.id);
+                  }}
+                  type="button"
+                >
+                  <div className="grid size-9 shrink-0 place-items-center rounded-full bg-[#252730] text-[10px] font-medium text-white/60">
+                    {(person?.username ?? person?.name ?? '?')
+                      .slice(0, 2)
+                      .toUpperCase()}
                   </div>
-                  <p className="mt-1 truncate text-[11px] text-white/38">
-                    {item.message}
-                  </p>
-                </div>
-                {item.unread ? (
-                  <CircleDot className="mt-1 size-3 text-[#f463aa]" />
-                ) : null}
-              </button>
-            ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center">
+                      <span className="truncate text-xs font-medium text-white/80">
+                        {person?.username
+                          ? `@${person.username}`
+                          : (person?.name ?? 'Instagram user')}
+                      </span>
+                      <span className="ml-auto text-[10px] text-white/28">
+                        {item.updatedAt
+                          ? new Date(item.updatedAt).toLocaleDateString()
+                          : ''}
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-[11px] text-white/38">
+                      Open conversation
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+            {nextCursor ? (
+              <Button
+                className="m-3"
+                disabled={loading}
+                onClick={() => void loadConversations(nextCursor)}
+                size="sm"
+                variant="outline"
+              >
+                Load more
+              </Button>
+            ) : null}
           </div>
         </section>
         <section className="flex min-w-0 flex-col">
           <div className="flex items-center border-b border-white/8 p-4">
             <div>
               <p className="text-sm font-medium text-white/82">
-                {inboxItems[selected].name}
+                {participant?.username
+                  ? `@${participant.username}`
+                  : (participant?.name ?? 'Conversation')}
               </p>
               <p className="text-[11px] text-white/35">
-                {inboxItems[selected].handle}
+                {active?.updatedAt
+                  ? `Updated ${new Date(active.updatedAt).toLocaleString()}`
+                  : 'Select a conversation'}
               </p>
             </div>
-            <Badge
-              variant="outline"
-              className="ml-auto border-[#e5aa56]/20 text-[#e7b96f]"
-            >
-              Preview data
-            </Badge>
-          </div>
-          <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-            <div
-              className={`grid size-12 place-items-center rounded-2xl ${account.connected ? 'bg-[#56c7aa]/10 text-[#83dcc5]' : 'bg-white/5 text-white/35'}`}
-            >
-              {account.connected ? (
-                <CheckCircle2 className="size-5" />
-              ) : (
-                <LockKeyhole className="size-5" />
-              )}
-            </div>
-            <h3 className="mt-4 text-base font-medium">
-              {account.connected
-                ? 'Instagram connection ready'
-                : 'Live inbox needs Meta access'}
-            </h3>
-            <p className="mt-2 max-w-sm text-sm leading-6 text-white/40">
-              {account.connected
-                ? 'Orbit can now identify this account securely. Add Meta webhooks next to ingest comments and messages in real time.'
-                : 'A personal account cannot connect to the official comment and messaging API. Your saved panel data is unaffected.'}
-            </p>
-            {!account.connected ? (
+            {active ? (
               <Button
-                variant="outline"
-                className="mt-5 border-white/10 bg-white/4 text-white/70"
-                onClick={onOpenSetup}
+                className="ml-auto"
+                disabled={messageLoading}
+                onClick={() => void loadMessages(active.id)}
+                size="sm"
+                variant="ghost"
               >
-                See connection path
+                <RefreshCw className={messageLoading ? 'animate-spin' : ''} />{' '}
+                Refresh
               </Button>
             ) : null}
           </div>
-          <div className="border-t border-white/8 p-4">
-            <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.025] p-2">
-              <Input
-                aria-label="Reply"
-                className="border-0 bg-transparent focus-visible:ring-0"
-                disabled
-                placeholder={
-                  account.connected
-                    ? 'Live reply sync is not enabled yet'
-                    : 'Reply unavailable in personal mode'
-                }
-              />
-              <Button disabled size="icon">
-                <Send />
+          <div className="flex-1 space-y-3 overflow-y-auto p-5">
+            {error ? (
+              <p
+                role="alert"
+                className="rounded-lg border border-red-400/20 bg-red-400/5 p-3 text-xs text-red-200"
+              >
+                {error}
+              </p>
+            ) : null}
+            {messages.map((item) => (
+              <article
+                className={`max-w-[85%] rounded-xl border border-white/8 p-3 text-sm ${item.from?.id === account.id ? 'ml-auto bg-[#17312b]' : 'bg-white/5'}`}
+                key={item.id}
+              >
+                <p className="whitespace-pre-wrap text-white/85">
+                  {item.text ||
+                    (item.attachments.length
+                      ? `[${item.attachments.map((attachment) => attachment.type).join(', ')}]`
+                      : 'Non-text message')}
+                </p>
+                <p className="mt-2 text-[10px] text-white/35">
+                  {item.createdAt
+                    ? new Date(item.createdAt).toLocaleString()
+                    : ''}
+                </p>
+              </article>
+            ))}
+            {messageCursor && selected ? (
+              <Button
+                disabled={messageLoading}
+                onClick={() => void loadMessages(selected, messageCursor)}
+                size="sm"
+                variant="outline"
+              >
+                Older messages
               </Button>
-            </div>
+            ) : null}
+            {!messages.length && !messageLoading && !error ? (
+              <p className="text-center text-sm text-white/40">
+                {!account.connected
+                  ? 'Connect Instagram to view messages.'
+                  : !hasPermission
+                    ? 'Reconnect Instagram and grant manage messages access.'
+                    : loading
+                      ? 'Loading conversations…'
+                      : selected
+                        ? 'No messages returned for this conversation.'
+                        : conversations.length
+                          ? 'Select a conversation.'
+                          : 'No eligible conversations were returned by Meta.'}
+              </p>
+            ) : null}
+          </div>
+          <div className="border-t border-white/8 p-4 text-xs text-white/35">
+            Read-only inbox. Replies require a separate reviewed action.
           </div>
         </section>
       </div>
+      {!account.connected ? (
+        <Button onClick={onOpenSetup} variant="outline">
+          See connection path
+        </Button>
+      ) : null}
     </div>
   );
 }
+/* oxlint-enable react/react-compiler */
 
 function ApprovalsView({
   approvals,
   onOpen,
-  onReset,
   onUpdate,
 }: {
   approvals: ApprovalItem[];
   onOpen: (item: ApprovalItem) => void;
-  onReset: () => void;
   onUpdate: (id: string, state: ApprovalState) => void;
 }) {
   const pending = approvals.filter((item) => item.state === 'pending');
@@ -1265,16 +1374,12 @@ function ApprovalsView({
             outcome here.
           </p>
         </div>
-        {pending.length === 0 ? (
-          <Button
-            variant="outline"
-            className="border-white/10 bg-white/4"
-            onClick={onReset}
-          >
-            <RefreshCw /> Restore examples
-          </Button>
-        ) : null}
       </div>
+      {pending.length === 0 ? (
+        <div className="rounded-2xl border border-white/8 bg-[#111216] p-6 text-sm text-white/45">
+          No actions await review. New approval requests will appear here.
+        </div>
+      ) : null}
       <div className="space-y-3">
         {pending.map((item) => (
           <article
@@ -1396,7 +1501,7 @@ function AudienceView({
             <h3 className="text-sm font-medium">Monitored accounts</h3>
           </div>
           <div className="divide-y divide-white/7">
-            {watchlist.map((item, index) => (
+            {watchlist.map((item) => (
               <div className="flex items-center gap-3 px-5 py-4" key={item}>
                 <div className="grid size-9 place-items-center rounded-full bg-white/6 text-[11px] text-white/45">
                   {item.slice(1, 3).toUpperCase()}
@@ -1404,7 +1509,7 @@ function AudienceView({
                 <div>
                   <p className="text-sm text-white/80">{item}</p>
                   <p className="mt-0.5 text-[11px] text-white/32">
-                    Manual review · added {index + 1}d ago
+                    Manual reference
                   </p>
                 </div>
                 <Button
@@ -1538,7 +1643,7 @@ function AutomationsView({
                     ? 'Account connected · provider step pending'
                     : 'Waiting for Meta connection'
                   : enabled[item.id]
-                    ? 'Active locally'
+                    ? 'Validation ready'
                     : 'Paused'}
               </span>
               {item.locked ? (
@@ -1557,7 +1662,7 @@ function AutomationsView({
                   size="sm"
                   variant="outline"
                 >
-                  Test run
+                  Validate sample
                 </Button>
               )}
             </div>
@@ -1772,7 +1877,9 @@ function SettingsView({
   account,
   accountLoading,
   localAi,
+  localAiToken,
   onChange,
+  onTokenChange,
   onConnect,
   onDisconnect,
   onOpenSetup,
@@ -1781,7 +1888,9 @@ function SettingsView({
   account: InstagramAccountView;
   accountLoading: boolean;
   localAi: LocalAiSettings;
+  localAiToken: string;
   onChange: React.Dispatch<React.SetStateAction<LocalAiSettings>>;
+  onTokenChange: (token: string) => void;
   onConnect: () => void;
   onDisconnect: () => void;
   onOpenSetup: () => void;
@@ -1797,7 +1906,27 @@ function SettingsView({
         onDisconnect={onDisconnect}
         onRefresh={onRefresh}
       />
-      <LocalAiSettingsCard localAi={localAi} onChange={onChange} />
+      <section className="rounded-2xl border border-white/8 bg-[#111216] p-5 text-sm leading-6 text-white/55">
+        <h3 className="font-medium text-white/85">Client account onboarding</h3>
+        <p className="mt-2">
+          Each client connects their own Instagram Business or Creator account
+          through the Connect Instagram button. Their Instagram user ID appears
+          above after authorization. Until Meta approves this app for public
+          use, each account also needs its own accepted tester role in Meta App
+          roles.
+        </p>
+        <p className="mt-2">
+          Public client onboarding and non-tester inbox access depend on Meta
+          App Review, required Advanced Access, and app publication. This panel
+          does not grant those approvals.
+        </p>
+      </section>
+      <LocalAiSettingsCard
+        localAi={localAi}
+        localAiToken={localAiToken}
+        onChange={onChange}
+        onTokenChange={onTokenChange}
+      />
     </div>
   );
 }
@@ -1855,6 +1984,22 @@ function InstagramConnectionCard({
                 Token encrypted in MongoDB
                 {expiry ? ` · refresh due before ${expiry}` : ''}
               </p>
+              <p>
+                Instagram user ID:{' '}
+                <code className="select-all text-white/70">{account.id}</code>
+              </p>
+              <p>
+                Scopes requested at connection:{' '}
+                {(account.scopes ?? []).join(', ') || 'Not reported'}
+              </p>
+              {!account.scopes?.includes(
+                'instagram_business_manage_messages',
+              ) ? (
+                <p className="text-[#efbd73]">
+                  Inbox access needs a fresh Instagram authorization with manage
+                  messages enabled in Vercel settings.
+                </p>
+              ) : null}
             </div>
           ) : account.configured ? (
             <div className="mt-2 max-w-2xl space-y-3 text-xs leading-5 text-white/40">
@@ -1874,9 +2019,9 @@ function InstagramConnectionCard({
                     In Meta Developers, open Instagram API → API setup with
                     Instagram login → Set up Instagram business login → Business
                     login settings. Add this exact value under OAuth redirect
-                    URIs. The generated Embed URL may use your site root instead.
-                    For an unpublished app, the connecting Instagram account
-                    must also accept an Instagram tester invitation.
+                    URIs. The generated Embed URL may use your site root
+                    instead. For an unpublished app, the connecting Instagram
+                    account must also accept an Instagram tester invitation.
                   </p>
                 </div>
               ) : null}
@@ -1912,6 +2057,18 @@ function InstagramConnectionCard({
         <div className="flex flex-wrap gap-2">
           {account.connected ? (
             <>
+              {!account.scopes?.includes(
+                'instagram_business_manage_messages',
+              ) ? (
+                <Button
+                  disabled={loading}
+                  onClick={onConnect}
+                  size="sm"
+                  variant="outline"
+                >
+                  Reconnect for inbox
+                </Button>
+              ) : null}
               <Button
                 disabled={loading}
                 onClick={onRefresh}
@@ -1947,10 +2104,14 @@ function InstagramConnectionCard({
 
 function LocalAiSettingsCard({
   localAi,
+  localAiToken,
   onChange,
+  onTokenChange,
 }: {
   localAi: LocalAiSettings;
+  localAiToken: string;
   onChange: React.Dispatch<React.SetStateAction<LocalAiSettings>>;
+  onTokenChange: (token: string) => void;
 }) {
   const [testState, setTestState] = useState<
     'idle' | 'testing' | 'connected' | 'error'
@@ -1977,17 +2138,7 @@ function LocalAiSettingsCard({
     setTestState('testing');
     setTestMessage('Checking the local server…');
     try {
-      const response = await fetch('/api/local-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'test', ...localAi }),
-      });
-      const data = (await response.json()) as {
-        error?: string;
-        model?: string;
-      };
-      if (!response.ok)
-        throw new Error(data.error || 'Connection test failed.');
+      const data = await localAiModels(localAi, localAiToken);
       setTestState('connected');
       setTestMessage(`Connected. Using ${data.model}.`);
     } catch (error) {
@@ -2017,8 +2168,9 @@ function LocalAiSettingsCard({
             </Badge>
           </div>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-white/40">
-            Use a model running on the same laptop. Configuration stays in this
-            browser and no prompt is sent to a hosted AI provider.
+            Your browser connects directly to the model on this laptop,
+            including when the panel is hosted on Vercel. The API token stays in
+            this tab only.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -2034,6 +2186,21 @@ function LocalAiSettingsCard({
           />
         </div>
       </div>
+      <Button
+        className="mt-4 border-[#a990e9]/20 bg-[#a990e9]/8 text-[#d4c4ff]"
+        onClick={() =>
+          onChange({
+            enabled: true,
+            provider: 'openai-compatible',
+            baseUrl: 'http://127.0.0.1:1234',
+            model: 'qwen/qwen3.5-9b',
+          })
+        }
+        size="sm"
+        variant="outline"
+      >
+        Use local Qwen in LM Studio
+      </Button>
 
       <div
         className={`mt-6 grid gap-4 transition-opacity sm:grid-cols-2 ${localAi.enabled ? 'opacity-100' : 'pointer-events-none opacity-45'}`}
@@ -2097,13 +2264,31 @@ function LocalAiSettingsCard({
             value={localAi.baseUrl}
           />
         </label>
+        {localAi.provider === 'openai-compatible' ? (
+          <label
+            className="block text-xs text-white/55 sm:col-span-2"
+            htmlFor="local-ai-token"
+          >
+            LM Studio API token (if authentication is enabled)
+            <Input
+              autoComplete="off"
+              className="mt-2"
+              disabled={!localAi.enabled}
+              id="local-ai-token"
+              onChange={(event) => onTokenChange(event.target.value)}
+              type="password"
+              value={localAiToken}
+            />
+          </label>
+        ) : null}
       </div>
 
       <div className="mt-5 flex flex-col gap-3 border-t border-white/7 pt-4 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] text-white/32">
-            Settings save automatically on this device. Leave model blank to use
-            the server’s first available model.
+            Server settings save in this browser; the API token is kept only
+            until this tab closes. Load Qwen in LM Studio and enable CORS for
+            browser access.
           </p>
           {testMessage ? (
             <p
@@ -2248,15 +2433,19 @@ function AccountSettingsView({
 }
 
 function NewContentDialog({
+  accountConnected,
   content,
   localAi,
+  localAiToken,
   onChange,
   onOpenChange,
   open,
   showNotice,
 }: {
+  accountConnected: boolean;
   content: ContentItem[];
   localAi: LocalAiSettings;
+  localAiToken: string;
   onChange: React.Dispatch<React.SetStateAction<ContentItem[]>>;
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -2272,33 +2461,19 @@ function NewContentDialog({
     setGenerating(true);
     setAiMessage('');
     try {
-      const response = await fetch('/api/local-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'generate',
-          ...localAi,
-          prompt: [
-            'Write one concise, natural Instagram caption.',
-            `Content format: ${format}.`,
-            `Working title: ${title.trim() || 'Untitled content'}.`,
-            caption.trim() ? `Improve this draft: ${caption.trim()}` : '',
-            'Return only the finished caption. Do not add analysis or quotation marks.',
-          ]
-            .filter(Boolean)
-            .join('\n'),
-        }),
-      });
-      const data = (await response.json()) as {
-        error?: string;
-        model?: string;
-        text?: string;
-      };
-      if (!response.ok || !data.text) {
-        throw new Error(
-          data.error || 'The local model did not return a caption.',
-        );
-      }
+      const data = await generateLocalCaption(
+        localAi,
+        localAiToken,
+        [
+          'Write one concise, natural Instagram caption.',
+          `Content format: ${format}.`,
+          `Working title: ${title.trim() || 'Untitled content'}.`,
+          caption.trim() ? `Improve this draft: ${caption.trim()}` : '',
+          'Return only the finished caption. Do not add analysis or quotation marks.',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
       setCaption(data.text);
       setAiMessage(`Generated locally with ${data.model ?? 'your model'}.`);
     } catch (error) {
@@ -2314,6 +2489,10 @@ function NewContentDialog({
 
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!accountConnected) {
+      showNotice('Connect Instagram before saving a durable draft.');
+      return;
+    }
     if (!title.trim() || !caption.trim()) return;
     const response = await fetch('/api/workflows', {
       method: 'POST',
@@ -2340,7 +2519,7 @@ function NewContentDialog({
     setCaption('');
     setFormat('Post');
     onOpenChange(false);
-    showNotice('Draft validated and added to your local content plan.');
+    showNotice('Draft validated and saved to your connected content plan.');
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -2348,7 +2527,9 @@ function NewContentDialog({
         <DialogHeader>
           <DialogTitle>Create content draft</DialogTitle>
           <DialogDescription>
-            Prepare the copy and format now. Nothing will be published.
+            {accountConnected
+              ? 'Prepare a draft for this connected account. Nothing will be published.'
+              : 'Connect Instagram before saving a draft.'}
           </DialogDescription>
         </DialogHeader>
         <form id="content-form" className="space-y-4" onSubmit={submit}>
@@ -2439,6 +2620,7 @@ function NewContentDialog({
           </Button>
           <Button
             className="bg-[#e9e4dc] text-[#15161a]"
+            disabled={!accountConnected}
             form="content-form"
             type="submit"
           >

@@ -64,7 +64,8 @@ export class StoreDraftNode extends BaseNode {
     return {
       node: this.id,
       status: 'completed',
-      message: 'Draft stored in the content queue.',
+      message:
+        'Caption validated. Save the draft in the content workspace to persist it.',
     };
   }
 }

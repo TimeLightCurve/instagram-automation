@@ -2,6 +2,7 @@ const defaultScopes = [
   'instagram_business_basic',
   'instagram_business_content_publish',
   'instagram_business_manage_comments',
+  'instagram_business_manage_messages',
 ];
 
 function normalizeOrigin(value: string | undefined | null) {
@@ -12,9 +13,7 @@ function isLoopbackOrigin(value: string) {
   try {
     const hostname = new URL(value).hostname;
     return (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '::1'
+      hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
     );
   } catch {
     return false;
@@ -70,7 +69,7 @@ export function instagramWebhookCallbackUrl(requestOrigin?: string | null) {
   return `${config.appUrl}/api/instagram/webhook`;
 }
 
-async function metaJson(url: string, init?: RequestInit) {
+export async function metaJson(url: string, init?: RequestInit) {
   const response = await fetch(url, {
     ...init,
     cache: 'no-store',

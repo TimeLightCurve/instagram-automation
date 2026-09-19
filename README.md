@@ -1,15 +1,21 @@
 # Orbit IG
 
-A code-first Instagram operations panel for content planning, human-approved
-engagement, official professional-account connection, and monitored workflows.
+A code-first Instagram operations panel for account-scoped content drafts,
+read-only eligible DMs, official professional-account connection, and monitored
+workflow validation.
 
-## Current personal-account mode
+## Current capability map
 
-- Create content drafts with browser storage as an offline fallback.
-- Maintain an audience watchlist.
-- Review suggested likes, follows, and comments.
-- Open Instagram manually and record the completed or skipped action.
-- Run local workflow components through `/api/workflows`.
+- Connected accounts have account-scoped drafts, manual watchlists, and approval
+  records in MongoDB. New disconnected drafts cannot be saved.
+- Inbox reads eligible conversations and messages from Meta's official API when
+  the connected account requested `instagram_business_manage_messages`.
+- The approval queue starts empty. No suggestions or unrelated account actions
+  are fabricated.
+- Caption validation is available. Publishing, comment automation, and outbound
+  DM replies are not implemented or represented as active.
+- The included NabzLab Nava concept post is a draft for `@nabzlabai` only. It
+  will never publish without a separate action.
 
 No Instagram password is collected, and no interaction on an unrelated account
 is performed automatically.
@@ -23,13 +29,16 @@ computer. Orbit supports:
 - OpenAI-compatible local servers such as LM Studio, using
   `http://127.0.0.1:1234` by default.
 
-The model name is optional. When left empty, Orbit selects the first model
-reported by the server. For Ollama, `qwen3:8b` is an example model name. Use the
-**Test connection** button after the local model server is running.
+The browser calls the loopback model server directly, even when the panel is
+hosted on Vercel. Use **Use local Qwen in LM Studio** for the installed
+`qwen/qwen3.5-9b` model on port 1234. LM Studio must be running with CORS
+enabled. If its server requires authentication, enter an API token in Settings;
+the token stays in the current browser tab and is not sent to Vercel. Use
+**Test connection** before generating a caption. An app hosted on Vercel cannot
+call `127.0.0.1` on the user's laptop from a server route.
 
-Local AI requests are accepted only for loopback or `host.docker.internal`
-addresses. The panel and model server must run on the same laptop; a Vercel
-deployment cannot reach a model running on your laptop.
+The local AI URL is limited to loopback addresses. Each operator needs their
+own local model server; this is not a shared AI service for clients.
 
 ## Instagram Business connection
 
@@ -58,6 +67,9 @@ While the Meta app is unpublished, add the connecting Instagram account under
 from that Instagram account. Otherwise Meta may show "Insufficient Developer
 Role" after the redirect URI is fixed. Production use of publishing, comment,
 and messaging permissions may require Meta App Review and Advanced Access.
+Each client must connect their own professional account; adding an Instagram
+tester is only a development path. Meta's Instagram setup page explicitly says
+live data requires successful app review. The app cannot self-approve.
 
 For webhooks, register `APP_URL/api/instagram/webhook` as the callback URL and
 enter the same value as `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` in both Meta and the
@@ -66,7 +78,8 @@ application environment. The webhook URL is separate from the OAuth redirect.
 ## MongoDB and monitoring
 
 When Instagram is connected, content drafts, approvals, and the audience
-watchlist synchronize to MongoDB. The **Activity** screen shows database and
+watchlist synchronize to MongoDB. Seeded demo records are removed on load.
+The **Activity** screen shows database and
 connection health plus durable job history for workflows, local AI operations,
 OAuth connections, disconnects, and token refreshes.
 

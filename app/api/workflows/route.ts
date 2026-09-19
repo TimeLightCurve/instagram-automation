@@ -20,6 +20,16 @@ export async function POST(request: Request) {
   if (!engine)
     return Response.json({ error: 'Unknown workflow.' }, { status: 404 });
 
+  if (body.workflowId !== 'content-prep') {
+    return Response.json(
+      {
+        error:
+          'This workflow has no provider action yet. It cannot be run as an automation.',
+      },
+      { status: 501 },
+    );
+  }
+
   const result = await engine.run({
     accountMode:
       body.accountMode === 'professional' ? 'professional' : 'personal',
