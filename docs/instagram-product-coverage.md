@@ -23,14 +23,14 @@ Meta's official [Instagram Send API collection](https://www.postman.com/meta/ins
 
 ## Current live release gates
 
-1. `main` commit `2c2729a` passed lint/build and GitHub reported Vercel deployment success. A public Vercel page loads the new asset. Authenticated Brave remained blank during reload, so the diagnostic has **not** produced a live Meta result. A public health check does not prove DM access.
-2. In Meta Developers > Ops > Review > Verification, business portfolio **Nabz** (ID `3261307337377735`) is **Incomplete**. The page says business verification is required for user-data access; Tech Provider access verification for other businesses starts only after business verification.
+1. The authenticated production diagnostic returned `identityMatches: true` and `identifiersDiffer: true`. All three conversation reads (`me`, connected account, profile ID) returned zero rows without an API error. This confirms that the connected token reaches Meta and matches the stored account; it does **not** establish that the messaging permission was granted or that all Instagram DMs are available through the API.
+2. In Meta Developers > Ops > Review > Verification, business portfolio **Nabz** (ID `3261307337377735`) is **Incomplete**. Business verification is part of the App Review and access path for serving client accounts. It is not a prerequisite for completing OAuth, and the zero-row diagnostic alone does not show that verification is the cause of this account's missing DM.
 3. Meta App Review submission is disabled pending Verification, App settings, Allowed usage, Data handling, and Reviewer instructions. Review and publish only the permissions demonstrated by working product flows; Meta decides approval.
 4. Do not invite customers into the current shared panel. Client OAuth after Meta approval should replace per-customer tester invitations; the app still needs organization auth and tested account isolation.
 
 ## Next acceptance sequence
 
-1. In the authenticated live panel, run **Inbox → Diagnose empty inbox**. Capture only route labels/counts/errors and whether identities match; never copy a token. Compare the accepted tester's inbound message and the non-role sender's result.
+1. Check the token's **granted** `instagram_business_manage_messages` permission, rather than the requested scopes stored by older connections. Compare a fresh inbound message from an eligible test sender with a non-role sender; neither a successful Basic profile lookup nor three empty conversation lists proves messaging access.
 2. Confirm in Meta dashboard that `messages` is subscribed for the app and that the connected account has the required account-level subscription. A verified callback alone does not prove delivery.
 3. Store signed inbound webhook events idempotently per connected Instagram account; reconcile them with Graph conversation history. Exercise a consented inbound DM and verify sender, text, timestamp and repeated delivery.
 4. Build manual reply first, then opt-in keyword rules and time-limited follow-ups. Verify actions with the customer's explicit choice and maintain logs and kill switches.

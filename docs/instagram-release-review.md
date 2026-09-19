@@ -5,7 +5,7 @@
 | Area            | Current behavior                                                                                                                                    | Release status                             |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | Instagram Login | OAuth callback and connected professional profile are working on Vercel for `@nabzlabai`.                                                           | Tester validation only                     |
-| Inbox           | Reads eligible conversations and paginated messages directly from Meta with the connected account token. Read only; API errors appear in the panel. | Needs authenticated live test after deploy |
+| Inbox           | Reads eligible conversations and paginated messages directly from Meta with the connected account token. Read only; API errors appear in the panel. | Production diagnostic returned zero conversations on all three identity paths; DM retrieval remains unverified |
 | Content         | Account-scoped drafts in MongoDB. One Nava concept image from nabzlab.com and caption are prepared for `@nabzlabai`; no publish action occurs.      | Draft review ready                         |
 | Approvals       | Empty queue until real records are created. Manual open/skip/done actions remain. No automatic discovery.                                           | Manual only                                |
 | Audience        | Manual reference watchlist in the connected account's state.                                                                                        | Manual only                                |
@@ -20,6 +20,7 @@
 - `instagram_business_content_publish` and `instagram_business_manage_comments` now show **Ready for testing**. The comments permission initially returned Meta's **Something went wrong** dialog, but a later dashboard check confirmed it was added.
 - App Review showed **Not submitted**. The Instagram setup page says successful App Review is required before the app can access live data.
 - The App Review request list also showed unrelated `manage_fundraisers`, `public_profile`, and Marketing API Access Tier requests. Review/remove irrelevant requests before submitting the Instagram use case.
+- The authenticated production inbox diagnostic confirmed the saved account identity and successful conversation requests on three paths, each with zero rows. This establishes a working OAuth connection, not that the messaging grant or DM visibility is working. Business verification is for the App Review/client-access path; this diagnostic does not identify it as the cause of the empty inbox.
 
 These dashboard statuses are Meta configuration, not evidence of Advanced Access or approval. Only Meta can grant public production access.
 
