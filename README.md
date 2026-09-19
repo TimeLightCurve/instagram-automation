@@ -39,9 +39,13 @@ long-lived tokens, encrypted with AES-256-GCM, and stored in MongoDB. The browse
 keeps only a signed, HTTP-only connection cookie.
 
 1. Create a Meta app and select **API setup with Instagram login**.
-2. Set `APP_URL` to the public HTTPS origin and register its exact
-   `/api/instagram/callback` URL under **Instagram → API setup with Instagram
-   login**. The scheme, host, path, and trailing slash must match exactly.
+2. Set `APP_URL` to the public HTTPS origin. In Meta Developers, open **Use
+   cases → Instagram API → API setup with Instagram login → Set up Instagram
+   business login → Business login settings → OAuth redirect URIs** and add
+   the exact `APP_URL/api/instagram/callback` URL. The generated Embed URL may
+   point to the site root; that URL is only an example and cannot receive
+   Orbit's OAuth callback. The scheme, host, path, and trailing slash must
+   match exactly.
 3. Copy `.env.example` to `.env.local` and fill in MongoDB, Instagram App, and
    secret values. For local work set `APP_URL=http://localhost:3000`. On Vercel,
    set the same keys in Project → Settings → Environment Variables with
@@ -49,9 +53,11 @@ keeps only a signed, HTTP-only connection cookie.
 4. Start the app and use **Settings → Instagram Business connection**. The
    panel shows the exact redirect URI the server will send to Meta.
 
-During development, the Instagram account must be an app tester or otherwise
-have access to the app. Production use of publishing, comment, and messaging
-permissions may require Meta App Review and Advanced Access.
+While the Meta app is unpublished, add the connecting Instagram account under
+**App roles → Roles → Add People → Instagram tester** and accept the invitation
+from that Instagram account. Otherwise Meta may show "Insufficient Developer
+Role" after the redirect URI is fixed. Production use of publishing, comment,
+and messaging permissions may require Meta App Review and Advanced Access.
 
 For webhooks, register `APP_URL/api/instagram/webhook` as the callback URL and
 enter the same value as `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` in both Meta and the

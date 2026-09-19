@@ -1871,8 +1871,12 @@ function InstagramConnectionCard({
                     {account.oauthRedirectUri}
                   </code>
                   <p className="mt-2 text-[11px] text-white/32">
-                    Register this exact value under Instagram → API setup with
-                    Instagram login. Do not add a trailing slash.
+                    In Meta Developers, open Instagram API → API setup with
+                    Instagram login → Set up Instagram business login → Business
+                    login settings. Add this exact value under OAuth redirect
+                    URIs. The generated Embed URL may use your site root instead.
+                    For an unpublished app, the connecting Instagram account
+                    must also accept an Instagram tester invitation.
                   </p>
                 </div>
               ) : null}
